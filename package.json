@@ -1,0 +1,41 @@
+{
+  "name": "ec",
+  "version" : "0.0.1",
+  "description": "JavaScript Evolutionary Computation library",
+  "main": "build/ec.js",
+  "repository": "xizhonghua/ec.js",
+  "files": [
+    "package.json",
+    "LICENSE",
+    "README.md",
+    "build/ec.js",
+    "build/ec.min.js",
+    "src"
+  ],
+  "directories": {
+    "docs": "docs",
+    "examples": "examples",
+    "test": "test"
+  },
+  "eslintConfig": {
+    "extends": "mdcs"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "build-test": "rollup -c test/rollup.unit.config.js",
+    "build-uglify": "rollup -c && uglifyjs build/ec.js -cm --preamble \"// ec.org/license\" > build/ec.min.js",
+    "dev": "rollup -c -w -m inline",
+    "lint": "eslint src",
+    "test": "rollup -c test/rollup.unit.config.js -w"
+  },
+  "license": "Aparche",
+  "devDependencies": {
+    "eslint": "^4.1.1",
+    "eslint-config-mdcs": "^4.2.2",
+    "qunitjs": "^2.1.1",
+    "rollup": "^0.43.0",
+    "rollup-watch": "^4.0.0",
+    "uglify-js": "^3.0.23",
+    "electron": "^1.6.1"
+  }
+}
