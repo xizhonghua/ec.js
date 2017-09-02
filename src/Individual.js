@@ -38,6 +38,7 @@ Object.assign( Individual.prototype, {
     ind.fitness = this.fitness;
     ind.evaluated = this.evaluated;
     ind.genomes = this.genomes.slice(0);
+    return ind;
   }
 });
 

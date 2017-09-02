@@ -32,36 +32,33 @@
   var dstData;
   var lastBestData;
   var currBestData;
+  var info = document.getElementById("info");
+  var debug = document.getElementById("debug");
+
+
   var gen = 0;
   var bestError = 1e10;
   var k=0;
-  var groups = [];
-  var kPop = 16;
-  var kMaxK = 1024;
+  var pops = [];
+
+  var kNumIndividuals = 64;
+  var kMaxK = 64;
   var kMaxGen = 1000;
   var bestCanvas;
   var maxError = 1e10;
-  var info = document.getElementById("info");
-  var debug = document.getElementById("debug");
   
-  var kMutationProb = 1;
-  var kStdDev = 0.1;
+  
+  var kMutationProb = 0.5;
+  var kStdDev = 0.05;
 
-  var kCrossOverProb = 0.1;
+  var kGenomeSize = 7; // a,r,g,b,x,y,R
+  var kCrossOverProb = 0.5;
   var kCrossOverType = 'any';
-  var kTurnmentSelection = 2;
+  var kTournament = 2;
 
   var totalEvaled = 0;
   var totalBest = 0;
   var started;
-
-  var problem = new EC.Problem();
-
-  problem.maxGeneration = 1000;
-  problem.genomeSize = 7;
-  problem.testMethod = function() {
-    console.log("testMethod in painting.html!");
-  }
 
   function gaussianRand() {
     var rand = 0;
@@ -105,46 +102,84 @@
     bestCanvas.width = width;
     bestCanvas.height = height;
 
-    problem.initPopulation();
-    problem.run();
+    // problem.initPopulation();
+    // problem.run();
 
-    initPop();
+    initPops(kNumIndividuals);
 
     gen = 1;
     started = true;
     evolve(0);
   }
 
-  function initPop() {
-    groups = [];
-    for(var i=0;i<kPop;++i) {
-      genomes = new Array(7);
-      for(var j=0;j<genomes.length;++j)
-        genomes[j] = Math.random();
-      groups.push(genomes);
+  function initPops(numIndividuals) {
+    pops = []
+    for(var i=0;i<numIndividuals;++i) {
+      var ind = new EC.Individual(kGenomeSize);
+      for(var j=0;j<ind.genomes.length;++j)
+        ind.genomes[j] = Math.random();
+      pops.push(ind);
     }
   }
 
-  function breed() {
-    var new_pop = [];
-
+  function tournamentSelect(tournament) {
+    var bestInd = pops[Math.round(Math.random()*(pops.length-1))];
+    for(var i=1;i<tournament;++i) {
+      var ind = pops[Math.round(Math.random()*(pops.length-1))];
+      if(!ind || !bestInd) {
+        console.log('???');
+      }
+      if(ind.fitness > bestInd.fitness) {
+        bestInd = ind;
+      }
+    }
+    return bestInd;
   }
 
-  function mutate(stddev) {
-    for(var i=0;i<groups.length;++i) {
-      var genomes = groups[i];
+  // generate a new child by corssoverring two parents
+  function crossOver(p1, p2) {
+    var child = p1.clone();
+    
+    child.fitness = 0;
+    child.evaluated = false;
+
+    for(var i=0;i<child.genomes.length;++i) {
+      if(Math.random() < kCrossOverProb) {
+        child.genomes[i] = p2.genomes[i];
+      }
+    }
+    return child;
+  }
+
+  function breed() {
+    var new_pops = [];
+    for(var i=0;i<pops.length;++i) {
+      var p1 = tournamentSelect(kTournament);
+      var p2 = tournamentSelect(kTournament);
+      var c = crossOver(p1, p2);
+      mutate(c, kStdDev);
+      new_pops.push(c);
+    }
+
+    // kill all the parents!!!
+    pops = new_pops;
+  }
+
+  function mutate(ind, stddev) {
+      var genomes = ind.genomes;
       for(var j=0;j<genomes.length;++j) {
         if(Math.random() > kMutationProb) continue;
         genomes[j] += (gaussianRand()*2*stddev - stddev);
         if(genomes[j]>1) genomes[j] = 1;
         if(genomes[j]<0) genomes[j] = 0;
       }
-    }
   }
 
-  function evaluate(genomes) {
-    draw(genomes);
+  function evaluate(ind) {
+    draw(ind);
     var currError = error();
+    ind.fitness = 1 - currError;
+    ind.evaluated = true;
      
      ++totalEvaled;
 
@@ -163,28 +198,27 @@
   function evolve(timestamp) {
     if (!started) return;
     if (gen > kMaxGen) return;
-
-    kMaxK = Math.round(1000/gen) + 4;
-
-    mutate(kStdDev);
-    for (var i=0;i<kPop;++i) {
-      evaluate(groups[i]);
+    
+    for (var i=0;i<pops.length;++i) {
+      evaluate(pops[i]);
     }
     
     if (k>kMaxK) {
       gen += 1;
       lastBestData = currBestData;
       k=0;
-      initPop();
     } else {
       k++;
     }
+
+    breed();
 
     // console.log(timestamp);
     window.requestAnimationFrame(evolve); 
   }
 
-  function draw(genomes) {
+  function draw(ind) {
+    var genomes = ind.genomes;
     ctx.clearRect(0, 0, width, height);
     if (lastBestData) {
       ctx.putImageData(lastBestData, 0, 0);
@@ -205,8 +239,6 @@
     ctx.arc(x,y,R,0,2*Math.PI);
     ctx.fill();
     ctx.closePath();
-
-    // debug.innerHTML = x + "," + y + "," + R + " " + style + "," + a;
 
     dstData = ctx.getImageData(0, 0, width, height);
   }
