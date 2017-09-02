@@ -1,6 +1,6 @@
 {
   "name": "ec",
-  "version" : "0.0.1",
+  "version": "0.0.1",
   "description": "JavaScript Evolutionary Computation library",
   "main": "build/ec.js",
   "repository": "xizhonghua/ec.js",
@@ -30,12 +30,12 @@
   },
   "license": "Aparche",
   "devDependencies": {
+    "electron": "^1.6.1",
     "eslint": "^4.1.1",
     "eslint-config-mdcs": "^4.2.2",
     "qunitjs": "^2.1.1",
-    "rollup": "^0.43.0",
+    "rollup": "^0.49.2",
     "rollup-watch": "^4.0.0",
-    "uglify-js": "^3.0.23",
-    "electron": "^1.6.1"
+    "uglify-js": "^3.0.23"
   }
 }

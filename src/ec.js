@@ -1,1 +1,2 @@
-export { Crossover } from './crossver.js'
+export { Individual } from './Individual.js'
+export { Problem } from './Problem.js'

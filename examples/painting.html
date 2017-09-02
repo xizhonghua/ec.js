@@ -2,9 +2,237 @@
 <html>
 <head>
   <title>Painting - ec.js - example</title>
-  <script src="../build/ec.js" type="text/javascript" ></script>
+  <style type="text/css">
+    
+  </style>
+  <script src="../build/ec.min.js" type="text/javascript"></script>
 </head>
 <body>
+<div id="info">
+</div>
+<div id="debug">
+</div>
+<div id="target" style="float: left;">
+<img id="target_image" src="images/MonaLisaSmall.jpg" onload="init()" />
+</div>
+<div id="current" style="float: left;">
+<canvas id="best_canvas" ></canvas>
+<canvas id="current_canvas" style="visibility: hidden;"></canvas>
+</div>
+<div style="float: clear">
+</div>
+<button onclick="pause()">Pause</button>
+<script type="text/javascript">
 
+  var width;
+  var height;
+  var c;
+  var ctx;
+  var srcData;
+  var dstData;
+  var lastBestData;
+  var currBestData;
+  var gen = 0;
+  var bestError = 1e10;
+  var k=0;
+  var groups = [];
+  var kPop = 16;
+  var kMaxK = 1024;
+  var kMaxGen = 1000;
+  var bestCanvas;
+  var maxError = 1e10;
+  var info = document.getElementById("info");
+  var debug = document.getElementById("debug");
+  
+  var kMutationProb = 1;
+  var kStdDev = 0.1;
+
+  var kCrossOverProb = 0.1;
+  var kCrossOverType = 'any';
+  var kTurnmentSelection = 2;
+
+  var totalEvaled = 0;
+  var totalBest = 0;
+  var started;
+
+  var problem = new EC.Problem();
+
+  problem.maxGeneration = 1000;
+  problem.genomeSize = 7;
+  problem.testMethod = function() {
+    console.log("testMethod in painting.html!");
+  }
+
+  function gaussianRand() {
+    var rand = 0;
+    for (var i = 0; i < 6; i += 1) {
+      rand += Math.random();
+    }
+    return rand / 6;
+  }
+
+  function pause() {
+    if(started) {
+      started = false;
+    } else {
+      started = true;
+      evolve(0);
+    }
+  }
+  
+
+  function init(e) {
+    var c = document.getElementById("target_canvas");
+    var img = document.getElementById('target_image');
+    c = document.createElement('canvas');
+    width = img.width;
+    height = img.height;
+
+    c.width = width;
+    c.height = height;
+    ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, width, height);
+    srcData = ctx.getImageData(0, 0, width, height);
+
+    c = document.getElementById("current_canvas");
+    c.width = width;
+    c.height = height;
+    ctx = c.getContext("2d");
+    // ctx.putImageData(srcData, 0, 0);
+    maxError = width*height*255*255*9;
+
+    bestCanvas = document.getElementById("best_canvas");
+    bestCanvas.width = width;
+    bestCanvas.height = height;
+
+    problem.initPopulation();
+    problem.run();
+
+    initPop();
+
+    gen = 1;
+    started = true;
+    evolve(0);
+  }
+
+  function initPop() {
+    groups = [];
+    for(var i=0;i<kPop;++i) {
+      genomes = new Array(7);
+      for(var j=0;j<genomes.length;++j)
+        genomes[j] = Math.random();
+      groups.push(genomes);
+    }
+  }
+
+  function breed() {
+    var new_pop = [];
+
+  }
+
+  function mutate(stddev) {
+    for(var i=0;i<groups.length;++i) {
+      var genomes = groups[i];
+      for(var j=0;j<genomes.length;++j) {
+        if(Math.random() > kMutationProb) continue;
+        genomes[j] += (gaussianRand()*2*stddev - stddev);
+        if(genomes[j]>1) genomes[j] = 1;
+        if(genomes[j]<0) genomes[j] = 0;
+      }
+    }
+  }
+
+  function evaluate(genomes) {
+    draw(genomes);
+    var currError = error();
+     
+     ++totalEvaled;
+
+    // console.log("currError: " + currError + " bestError: " + bestError);
+
+    if (currError < bestError) {
+      ++totalBest;
+      bestError = currError;
+      currBestData = dstData;
+      bestCanvas.getContext('2d').putImageData(currBestData, 0, 0);
+    }
+
+    info.innerHTML = "Gen = " + gen + " k = " + k + " F = " + (1 - bestError) + " evaled = " + totalEvaled + " updated = " + totalBest;
+  }
+
+  function evolve(timestamp) {
+    if (!started) return;
+    if (gen > kMaxGen) return;
+
+    kMaxK = Math.round(1000/gen) + 4;
+
+    mutate(kStdDev);
+    for (var i=0;i<kPop;++i) {
+      evaluate(groups[i]);
+    }
+    
+    if (k>kMaxK) {
+      gen += 1;
+      lastBestData = currBestData;
+      k=0;
+      initPop();
+    } else {
+      k++;
+    }
+
+    // console.log(timestamp);
+    window.requestAnimationFrame(evolve); 
+  }
+
+  function draw(genomes) {
+    ctx.clearRect(0, 0, width, height);
+    if (lastBestData) {
+      ctx.putImageData(lastBestData, 0, 0);
+    }
+
+    var a = genomes[0];
+    var r = Math.round(genomes[1]*255);
+    var g = Math.round(genomes[2]*255);
+    var b = Math.round(genomes[3]*255);
+    var x = genomes[4] * width;
+    var y = genomes[5] * height;
+    var R = genomes[6] * width * 0.5 + 2;
+
+    ctx.beginPath();
+    ctx.globalAlpha = a;
+    var style ='rgb(' + r + "," + g + "," + b + ")";
+    ctx.fillStyle=style;
+    ctx.arc(x,y,R,0,2*Math.PI);
+    ctx.fill();
+    ctx.closePath();
+
+    // debug.innerHTML = x + "," + y + "," + R + " " + style + "," + a;
+
+    dstData = ctx.getImageData(0, 0, width, height);
+  }
+
+  function error() {
+   
+    var total_error = 0.0;
+    for(var i=0;i<srcData.data.length;i+=4) {
+      var r0 = srcData.data[i+0];
+      var g0 = srcData.data[i+1];
+      var b0 = srcData.data[i+2];
+      var a0 = srcData.data[i+3];
+
+      var r1 = dstData.data[i+0];
+      var g1 = dstData.data[i+1];
+      var b1 = dstData.data[i+2];
+      var a1 = dstData.data[i+3] / 255;
+
+      r1 = (1-a1) * 255 + a1 * r1;
+      g1 = (1-a1) * 255 + a1 * g1;
+      b1 = (1-a1) * 255 + a1 * b1;
+
+      total_error += 2*(r0-r1)*(r0-r1) + 4*(g0-g1)*(g0-g1) + 3*(b0-b1)*(b0-b1) ;
+    }
+    return total_error / maxError;
+  }
+</script>
 </body>
 </html>
