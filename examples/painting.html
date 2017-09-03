@@ -13,7 +13,7 @@
 <div id="debug">
 </div>
 <div id="target" style="float: left;">
-<img id="target_image" src="images/MonaLisaSmall.jpg" onload="init()" />
+<img id="target_image" src="images/chuyin.jpg" onload="init()" />
 </div>
 <div id="current" style="float: left;">
 <canvas id="best_canvas" ></canvas>
@@ -49,7 +49,7 @@
   
   
   var kMutationProb = 0.5;
-  var kStdDev = 0.05;
+  var kStdDev = 0.3;
 
   var kGenomeSize = 7; // a,r,g,b,x,y,R
   var kCrossOverProb = 0.5;
@@ -126,9 +126,6 @@
     var bestInd = pops[Math.round(Math.random()*(pops.length-1))];
     for(var i=1;i<tournament;++i) {
       var ind = pops[Math.round(Math.random()*(pops.length-1))];
-      if(!ind || !bestInd) {
-        console.log('???');
-      }
       if(ind.fitness > bestInd.fitness) {
         bestInd = ind;
       }
@@ -138,27 +135,34 @@
 
   // generate a new child by corssoverring two parents
   function crossOver(p1, p2) {
-    var child = p1.clone();
+    var c1 = p1.clone();
+    var c2 = p2.clone();
     
-    child.fitness = 0;
-    child.evaluated = false;
+    c1.fitness = 0;
+    c1.evaluated = false;
+    c2.fitness = 0;
+    c2.evaluated = false;
 
-    for(var i=0;i<child.genomes.length;++i) {
+    for(var i=0;i<c1.genomes.length;++i) {
       if(Math.random() < kCrossOverProb) {
-        child.genomes[i] = p2.genomes[i];
+        var tmp = c1.genomes[i];
+        c1.genomes[i] = c2.genomes[i];
+        c2.genomes[i] = tmp;
       }
     }
-    return child;
+    return [c1, c2];
   }
 
   function breed() {
     var new_pops = [];
-    for(var i=0;i<pops.length;++i) {
+    for(var i=0;i<pops.length/2;++i) {
       var p1 = tournamentSelect(kTournament);
       var p2 = tournamentSelect(kTournament);
-      var c = crossOver(p1, p2);
-      mutate(c, kStdDev);
-      new_pops.push(c);
+      var children = crossOver(p1, p2);
+      mutate(children[0], kStdDev);
+      mutate(children[1], kStdDev);
+      new_pops.push(children[0]);
+      new_pops.push(children[1]);
     }
 
     // kill all the parents!!!
